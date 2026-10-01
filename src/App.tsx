@@ -1,3 +1,4 @@
+import { Component, ReactNode } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthPage } from '@/pages/AuthPage';
@@ -16,6 +17,50 @@ import {
   DollarSign, BarChart3, Megaphone, Settings, FileText, Zap,
   AlertTriangle, Bell, CheckSquare, MapPin, Plug, Package,
 } from 'lucide-react';
+
+/**
+ * Error boundary that catches render-time crashes and shows a
+ * recoverable error screen instead of a blank black page.
+ */
+class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: '' };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error.message || 'Unknown error' };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('App crashed:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
+          <div className="max-w-md text-center">
+            <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 mb-4">
+              <AlertTriangle size={28} />
+            </div>
+            <h1 className="text-lg font-bold text-slate-900 dark:text-white">Something went wrong</h1>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              The application encountered an unexpected error. Try refreshing the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function ProtectedRoutes() {
   const { user, loading, activeOrg } = useAuth();
@@ -54,7 +99,13 @@ function ProtectedRoutes() {
 }
 
 function App() {
-  return <ProtectedRoutes />;
+  return (
+    <AppErrorBoundary>
+      <HashRouter>
+        <ProtectedRoutes />
+      </HashRouter>
+    </AppErrorBoundary>
+  );
 }
 
 export default App;
