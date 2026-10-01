@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Form';
-import { Brain, Mail, Lock, User, ArrowRight, BarChart3, TrendingUp, Shield } from 'lucide-react';
+import { Brain, Mail, Lock, User, ArrowRight, BarChart3, TrendingUp, Shield, AlertCircle } from 'lucide-react';
 
 export function AuthPage() {
   const { signIn, signUp } = useAuth();
@@ -12,16 +12,33 @@ export function AuthPage() {
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // prevent duplicate submission
+
     setError(null);
+    setSuccess(null);
     setLoading(true);
+
     const result = mode === 'signin'
       ? await signIn(email, password)
       : await signUp(email, password, fullName);
-    if (result.error) setError(result.error);
+
+    if (result.error) {
+      setError(result.error);
+    } else if (mode === 'signup') {
+      setSuccess('Account created successfully! Welcome to AI Business OS.');
+    }
+
     setLoading(false);
+  };
+
+  const switchMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
+    setError(null);
+    setSuccess(null);
   };
 
   return (
@@ -101,6 +118,7 @@ export function AuthPage() {
                 placeholder="Jane Smith"
                 required
                 icon={<User size={16} />}
+                disabled={loading}
               />
             )}
             <Input
@@ -111,6 +129,7 @@ export function AuthPage() {
               placeholder="you@company.com"
               required
               icon={<Mail size={16} />}
+              disabled={loading}
             />
             <Input
               label="Password"
@@ -121,23 +140,42 @@ export function AuthPage() {
               required
               minLength={6}
               icon={<Lock size={16} />}
+              disabled={loading}
             />
 
             {error && (
-              <div className="rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 px-3.5 py-2.5 text-sm text-rose-600 dark:text-rose-400">
-                {error}
+              <div className="flex items-start gap-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 px-3.5 py-2.5 text-sm text-rose-600 dark:text-rose-400">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
             )}
 
-            <Button type="submit" size="lg" loading={loading} className="w-full" icon={!loading ? <ArrowRight size={16} /> : undefined}>
-              {mode === 'signin' ? 'Sign in' : 'Create account'}
+            {success && (
+              <div className="flex items-start gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 px-3.5 py-2.5 text-sm text-emerald-600 dark:text-emerald-400">
+                <TrendingUp size={16} className="shrink-0 mt-0.5" />
+                <span>{success}</span>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              loading={loading}
+              disabled={loading}
+              className="w-full"
+              icon={!loading ? <ArrowRight size={16} /> : undefined}
+            >
+              {loading
+                ? (mode === 'signin' ? 'Signing in...' : 'Creating account...')
+                : (mode === 'signin' ? 'Sign in' : 'Create account')}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <button
-              onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); }}
-              className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              onClick={switchMode}
+              disabled={loading}
+              className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-50"
             >
               {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
               <span className="font-medium text-blue-600 dark:text-blue-400">
