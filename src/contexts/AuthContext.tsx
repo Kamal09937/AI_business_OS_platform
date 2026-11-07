@@ -11,6 +11,8 @@ interface AuthContextValue {
   activeOrg: Organization | null;
   activeMembership: OrgMember | null;
   loading: boolean;
+  orgSetupError: string | null;
+  retryOrgSetup: () => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -89,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [activeOrg, setActiveOrgState] = useState<Organization | null>(null);
   const [activeMembership, setActiveMembership] = useState<OrgMember | null>(null);
   const [loading, setLoading] = useState(true);
+  const [orgSetupError, setOrgSetupError] = useState<string | null>(null);
 
   const loadUserData = useCallback(async (userId: string) => {
     try {
@@ -100,11 +103,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .filter('org_members.user_id', 'eq', userId),
       ]);
 
+      if (profileRes.error) console.error('profile load error:', profileRes.error.message);
       if (profileRes.data) setProfile(profileRes.data as Profile);
+
+      if (orgsRes.error) {
+        console.error('orgs load error:', orgsRes.error.message);
+      }
 
       const orgs = (orgsRes.data || []) as unknown as (Organization & {
         org_members: { role: string; user_id: string; organization_id: string; id: string; created_at: string }[];
       })[];
+
+      // Auto-recover: authenticated user with zero orgs means the org-creation
+      // step failed during signup. Attempt to create one now so the user is
+      // never stuck on a dead-end screen with no organization.
+      if (orgs.length === 0) {
+        const fullName = profileRes.data?.full_name || 'My';
+        const { error: createErr } = await supabase.rpc('create_org_for_user', {
+          p_org_name: `${fullName}'s Organization`,
+          p_industry: 'General',
+        });
+        if (createErr) {
+          console.error('auto org creation failed:', createErr.message);
+          setOrgSetupError(
+            'We could not set up your workspace. Please try again, or contact support if the problem persists.'
+          );
+          setOrganizations([]);
+          setActiveOrgState(null);
+          setActiveMembership(null);
+          return;
+        }
+        setOrgSetupError(null);
+        // Reload to fetch the newly created org + membership
+        await loadUserData(userId);
+        return;
+      }
+
+      setOrgSetupError(null);
 
       const mappedOrgs: Organization[] = orgs.map((o) => ({
         id: o.id,
@@ -141,6 +176,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to load user data:', err);
     }
   }, []);
+
+  const retryOrgSetup = useCallback(async () => {
+    if (!user) return;
+    setOrgSetupError(null);
+    setLoading(true);
+    await loadUserData(user.id);
+    setLoading(false);
+  }, [user, loadUserData]);
 
   useEffect(() => {
     let mounted = true;
@@ -231,9 +274,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (createError) {
         console.error('create_org_for_user error:', createError.message);
-        // Auth account was created successfully but org setup failed —
-        // non-fatal. User can sign in and we retry org creation.
-        return { error: null };
+        // Auth account was created but org setup failed. loadUserData will
+        // auto-retry on next load, but surface the error so the UI can show
+        // a message instead of silently appearing to succeed.
+        return {
+          error:
+            'Your account was created, but we could not set up your workspace. Please sign in to retry.',
+        };
       }
 
       await loadUserData(data.user.id);
@@ -303,6 +350,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         activeOrg,
         activeMembership,
         loading,
+        orgSetupError,
+        retryOrgSetup,
         signUp,
         signIn,
         signOut,

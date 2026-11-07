@@ -1,4 +1,4 @@
-import { Component, ReactNode } from 'react';
+import { Component, ReactNode, useState as useReactState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthPage } from '@/pages/AuthPage';
@@ -13,9 +13,10 @@ import { ProfitEnginePage } from '@/pages/ProfitEnginePage';
 import { PricingPage } from '@/pages/PricingPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Button } from '@/components/ui/Button';
 import {
   DollarSign, BarChart3, Megaphone, Settings, FileText, Zap,
-  AlertTriangle, Bell, CheckSquare, MapPin, Plug, Package,
+  AlertTriangle, Bell, CheckSquare, MapPin, Plug, Package, RefreshCw,
 } from 'lucide-react';
 
 /**
@@ -62,12 +63,42 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
   }
 }
 
+function OrgSetupError() {
+  const { orgSetupError, retryOrgSetup } = useAuth();
+  const [retrying, setRetrying] = useReactState(false);
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    await retryOrgSetup();
+    setRetrying(false);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
+      <div className="max-w-md text-center">
+        <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 mb-4">
+          <AlertTriangle size={28} />
+        </div>
+        <h1 className="text-lg font-bold text-slate-900 dark:text-white">Workspace setup incomplete</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          {orgSetupError || 'Your account exists but your workspace could not be created. Please try again.'}
+        </p>
+        <div className="mt-6">
+          <Button onClick={handleRetry} loading={retrying} icon={!retrying ? <RefreshCw size={16} /> : undefined}>
+            Retry setup
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProtectedRoutes() {
-  const { user, loading, activeOrg } = useAuth();
+  const { user, loading, activeOrg, orgSetupError } = useAuth();
 
   if (loading) return <LoadingSpinner size="lg" />;
   if (!user) return <AuthPage />;
-  if (!activeOrg) return <AuthPage />;
+  if (!activeOrg) return orgSetupError ? <OrgSetupError /> : <LoadingSpinner size="lg" />;
 
   return (
     <Routes>
