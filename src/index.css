@@ -2,61 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
- * Theme system: three modes via CSS variables (rgb channel triplets).
- *  - :root        = Light theme (default slate values)
- *  - .dark        = Dark theme (slate-950 backgrounds)
- *  - .theme-black = Pure Black theme (#050505 bg, #111111 sidebar, #1A1A1A cards)
- * Tailwind config maps bg-slate-*/bg-white to these variables, so every
- * component themes automatically. `dark:` variants activate via the `dark`
- * class (set for BOTH dark and black themes so text contrast stays correct).
- */
 @layer base {
-  :root {
-    --slate-50: 248 250 252;
-    --slate-100: 241 245 249;
-    --slate-200: 226 232 240;
-    --slate-300: 203 213 225;
-    --slate-400: 148 163 184;
-    --slate-500: 100 116 139;
-    --slate-600: 71 85 105;
-    --slate-700: 51 65 85;
-    --slate-800: 30 41 59;
-    --slate-900: 15 23 42;
-    --slate-950: 2 6 23;
-    --c-white: 255 255 255;
-  }
-
-  .dark {
-    --slate-50: 20 30 48;
-    --slate-100: 26 38 58;
-    --slate-200: 38 51 74;
-    --slate-300: 58 71 95;
-    --slate-400: 130 145 170;
-    --slate-500: 155 170 195;
-    --slate-600: 185 198 220;
-    --slate-700: 205 216 235;
-    --slate-800: 226 234 248;
-    --slate-900: 238 243 251;
-    --slate-950: 245 248 252;
-    --c-white: 15 23 42;
-  }
-
-  .theme-black {
-    --slate-50: 17 17 17;   /* #111111 */
-    --slate-100: 26 26 26;  /* #1A1A1A */
-    --slate-200: 41 41 41;  /* #292929 */
-    --slate-300: 55 55 55;
-    --slate-400: 113 113 122;  /* #71717A */
-    --slate-500: 161 161 170;  /* #A1A1AA secondary text */
-    --slate-600: 195 195 200;
-    --slate-700: 220 220 224;
-    --slate-800: 238 238 240;
-    --slate-900: 245 245 247;
-    --slate-950: 5 5 5;     /* #050505 main background */
-    --c-white: 26 26 26;    /* #1A1A1A cards */
-  }
-
   * {
     border-color: theme('colors.slate.200');
   }
@@ -69,8 +15,6 @@
   }
   body {
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    background-color: rgb(var(--slate-950));
-    transition: background-color 0.2s ease;
   }
 }
 
@@ -90,21 +34,18 @@
   background: rgba(148, 163, 184, 0.5);
 }
 
-/* Recharts theming per mode */
-.recharts-text { fill: rgb(var(--slate-400)); }
-.recharts-cartesian-axis-tick-value { fill: rgb(var(--slate-400)); }
-
-.dark .recharts-default-tooltip,
-.theme-black .recharts-default-tooltip {
-  background-color: rgb(var(--c-white)) !important;
-  border-color: rgb(var(--slate-200)) !important;
-  color: rgb(var(--slate-100)) !important;
+/* Recharts tooltip dark mode */
+.dark .recharts-default-tooltip {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
 }
-.dark .recharts-tooltip-label,
-.theme-black .recharts-tooltip-label {
-  color: rgb(var(--slate-400)) !important;
+.dark .recharts-tooltip-label {
+  color: #94a3b8 !important;
 }
-.dark .recharts-cartesian-grid line,
-.theme-black .recharts-cartesian-grid line {
-  stroke: rgb(var(--slate-200)) !important;
+.dark .recharts-cartesian-grid line {
+  stroke: #334155 !important;
+}
+.dark .recharts-text {
+  fill: #94a3b8 !important;
 }
