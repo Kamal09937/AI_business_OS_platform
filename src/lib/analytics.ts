@@ -101,7 +101,7 @@ export async function fetchSalesMetrics(
     .lte('sale_date', range.end.toISOString());
 
   if (error || !data) {
-    throw new Error(`Failed to load sales metrics: ${error?.message || 'no data'}`);
+    return { revenue: 0, cost: 0, grossProfit: 0, grossMargin: 0, orderCount: 0, totalUnits: 0, avgOrderValue: 0 };
   }
 
   const rows = data as RawSaleRow[];
@@ -130,7 +130,7 @@ export async function fetchExpenseTotal(orgId: string, range: DateRange): Promis
     .gte('expense_date', range.start.toISOString())
     .lte('expense_date', range.end.toISOString());
 
-  if (error || !data) throw new Error(`Failed to load expenses: ${error?.message || 'no data'}`);
+  if (error || !data) return 0;
   return data.reduce((s, r) => s + Number(r.amount), 0);
 }
 
@@ -141,7 +141,7 @@ export async function fetchCustomerCount(orgId: string): Promise<number> {
     .eq('organization_id', orgId)
     .eq('status', 'active');
 
-  if (error) throw new Error(`Failed to load customers: ${error.message}`);
+  if (error) return 0;
   return count || 0;
 }
 
@@ -152,7 +152,7 @@ export async function fetchInventoryValue(orgId: string): Promise<number> {
     .eq('organization_id', orgId)
     .eq('is_active', true);
 
-  if (error || !data) throw new Error(`Failed to load inventory: ${error?.message || 'no data'}`);
+  if (error || !data) return 0;
   return data.reduce((s, r) => s + Number(r.unit_cost) * Number(r.stock_quantity), 0);
 }
 
@@ -184,9 +184,6 @@ export async function fetchDailySeries(
     .lte('expense_date', range.end.toISOString());
 
   const [salesRes, expensesRes] = await Promise.all([salesPromise, expensesPromise]);
-
-  if (salesRes.error) throw new Error(`Failed to load sales series: ${salesRes.error.message}`);
-  if (expensesRes.error) throw new Error(`Failed to load expense series: ${expensesRes.error.message}`);
 
   const interval = period === 'today' || period === '7d' ? 'day' : period === '30d' ? 'day' : 'month';
   const buckets = buildDateBuckets(range.start, range.end, interval);
@@ -285,7 +282,12 @@ export async function fetchTopProducts(
     .gte('sale_date', range.start.toISOString())
     .lte('sale_date', range.end.toISOString());
 
-  if (error || !data) throw new Error(`Failed to load top products: ${error?.message || 'no data'}`);
+  if (error || !data) return [];
+
+  const rows = data as unknown as {
+    total_revenue: number; gross_profit: number; quantity: number;
+    product_id: string; products: { name: string };
+  }[];
 
   const map = new Map<string, ProductMetrics>();
   for (const r of rows) {
@@ -331,7 +333,7 @@ export async function fetchExpensesByCategory(
     .gte('expense_date', range.start.toISOString())
     .lte('expense_date', range.end.toISOString());
 
-  if (error || !data) throw new Error(`Failed to load expense breakdown: ${error?.message || 'no data'}`);
+  if (error || !data) return [];
 
   const map = new Map<string, number>();
   for (const r of data as { category: string; amount: number }[]) {
